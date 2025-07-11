@@ -1,0 +1,198 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: AWS SAM template for Hackathon Project
+
+Globals:
+  Function:
+    Timeout: 10
+    Runtime: python3.13
+
+Resources:
+
+  DependencyLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: DependencyLayer
+      Description: Shared libraries for Lambda functions
+      ContentUri: layer/
+      CompatibleRuntimes:
+        - python3.13
+
+  AtomicFeederFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: app.lambda_handler
+      Runtime: python3.13
+      CodeUri: ./AtomicFeederFunction
+      Description: Function to write data to DynamoDB
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref LandRecordTable
+      Layers:
+        - !Ref DependencyLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref LandRecordTable
+      Events:
+        ScheduledEvent:
+          Type: Schedule
+          Properties:
+            Description: Runs every Friday at 16 UTC/9AM PST
+            Schedule: cron(0 16 ? * FRI *)
+        WriteToDynamoDBAPI:
+          Type: Api
+          Properties:
+            Path: /feeder
+            Method: POST
+
+  LandRecordFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: app.lambda_handler
+      Runtime: python3.13
+      CodeUri: ./LandRecordFunction
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref LandRecordTable
+      Layers:
+        - !Ref DependencyLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref LandRecordTable
+      Events:
+        LandRecordAPI:
+          Type: Api
+          Properties:
+            Path: /land
+            Method: POST
+
+  CitizenFeedbackFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: app.lambda_handler
+      Runtime: python3.13
+      CodeUri: ./CitizenFeedbackFunction
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref CitizenFeedbackTable
+      Layers:
+        - !Ref DependencyLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CitizenFeedbackTable
+      Events:
+        FeedbackAPI:
+          Type: Api
+          Properties:
+            Path: /feedback
+            Method: GET
+  
+  LandRecordTable:
+  Type: AWS::DynamoDB::Table
+  Properties:
+    BillingMode: PAY_PER_REQUEST
+    TableName: LandRecords
+    AttributeDefinitions:
+      - AttributeName: record_id
+        AttributeType: S
+      - AttributeName: parcel_id
+        AttributeType: S
+      - AttributeName: owner
+        AttributeType: S
+      - AttributeName: comment
+        AttributeType: S
+      - AttributeName: timestamp
+        AttributeType: S
+      - AttributeName: record_hash
+        AttributeType: S
+    KeySchema:
+      - AttributeName: record_id
+        KeyType: HASH
+
+  CitizenFeedbackTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      TableName: CitizenFeedbackTable
+      PrimaryKey:
+        Name: feedback_id
+        Type: String
+
+  ServiceTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      TableName: ServiceTable
+      PrimaryKey:
+        Name: requestId
+        Type: String
+
+  FrontendBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "hackathon-frontend-${AWS::AccountId}-${AWS::Region}"
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: error.html
+
+  StaticWebsiteBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref StaticWebsiteBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: PublicReadGetObject
+            Effect: Allow
+            Principal: "*"
+            Action: "s3:GetObject"
+            Resource: !Sub "${StaticWebsiteBucket.Arn}/*"
+  
+  FrontendUploaderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: app.lambda_handler
+      Timeout: 60
+      MemorySize: 128
+      Runtime: python3.13
+      CodeUri: ./FrontendUploader
+      Description: Function to upload frontend files to S3
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref FrontendBucket
+
+    FrontendUploaderCustomResource:
+    Type: Custom::FrontendUpload
+    DependsOn: FrontendUploaderFunction
+    Properties:
+      ServiceToken: !GetAtt FrontendUploaderFunction.Arn
+      BucketName: !Ref FrontendBucket
+      CodeUri: ./FrontendUploader
+
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: HackathonUserPool
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: HackathonClient
+      UserPoolId: !Ref UserPool
+      GenerateSecret: false
+
+Outputs:
+
+  WebsiteURL:
+    Value: !GetAtt FrontendBucket.WebsiteURL
+    Description: Public URL for your frontend
+
+  AtomicFeederFunctionAPI:
+    Description: "Data feeder for land registration details."
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/feeder"
+
+  LandRecordFunctionAPI:
+    Description: "API for land record management."
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/land"
+
+  CitizenFeedbackFunctionAPI:
+    Description: "API for citizen feedback."
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/feedback"
