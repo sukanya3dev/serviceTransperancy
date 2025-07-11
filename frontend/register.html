@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Land Registration</title>
+  <link rel="stylesheet" href="css/styles.css">
+
+  <!-- Vue.js CDN -->
+  https://cdn.jsdelivr.net/npm/vue@2
+
+  <!-- Web3.js CDN -->
+  https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js
+</head>
+<body>
+  <div id="app">
+    <h2>Land Registration Form</h2>
+
+    <form @submit.prevent="submitForm">
+      <input v-model="owner" placeholder="Owner Name" required>
+      <input v-model="landId" placeholder="Land ID" required>
+      <input v-model="location" placeholder="Location" required>
+      <button type="submit">Register Land</button>
+    </form>
+
+    <p v-if="message">{{ message }}</p>
+  </div>
+
+  <!-- API and Blockchain Logic -->
+  <script>
+    const API_BASE = 'http://localhost:5000'; // Change to your backend URL
+
+    async function postData(endpoint, data) {
+      try {
+        const response = await fetch(`${API_BASE}/${endpoint}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        return await response.json();
+      } catch (error) {
+        console.error('API error:', error);
+        return { message: 'Failed to connect to backend.' };
+      }
+    }
+
+    let web3;
+    let contract;
+
+    async function setupWeb3() {
+      if (window.ethereum) {
+        web3 = new Web3(window.ethereum);
+        await window.ethereum.request({ method: 'eth_requestAccounts' });
+
+        const contractAddress = '0xYourContractAddress'; // Replace with your deployed contract address
+        const contractABI = [/* Your ABI here */];       // Replace with your contract ABI
+
+        contract = new web3.eth.Contract(contractABI, contractAddress);
+      } else {
+        alert('Please install MetaMask to use blockchain features.');
+      }
+    }
+
+    async function registerLandOnChain(owner, landId, location) {
+      try {
+        const accounts = await web3.eth.getAccounts();
+        await contract.methods.registerLand(owner, landId, location)
+          .send({ from: accounts[0] });
+        return 'Land registered on blockchain!';
+      } catch (error) {
+        console.error('Blockchain error:', error);
+        return 'Blockchain registration failed.';
+      }
+    }
+
+    // Vue App
+    new Vue({
+      el: '#app',
+      data: {
+        owner: '',
+        landId: '',
+        location: '',
+        message: ''
+      },
+      async mounted() {
+        await setupWeb3();
+      },
+      methods: {
+        async submitForm() {
+          const payload = {
+            owner: this.owner,
+            landId: this.landId,
+            location: this.location
+          };
+
+          const backendResponse = await postData('register', payload);
+          const blockchainResponse = await registerLandOnChain(this.owner, this.landId, this.location);
+
+          this.message = `${backendResponse.message || 'Backend OK'} | ${blockchainResponse}`;
+        }
+      }
+    });
+  </script>
+</body>
+</html>
