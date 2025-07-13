@@ -1,0 +1,8 @@
+{
+  "queryStringParameters": {
+    "record_id": "9fa18721-c4f1-4a4e-acd8-0c8f471b03ab"
+  }
+}
+
+//postman 
+https://bibgtokc7g.execute-api.us-east-1.amazonaws.com/Prod/land?record_id=c40a71a8-ff65-4b9d-8bb9-83773f476a6f

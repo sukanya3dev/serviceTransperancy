@@ -1,13 +1,23 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: AWS SAM template for Hackathon Project
+Description: AWS SAM template for Land Registartion Project
 
 Globals:
   Function:
     Timeout: 10
-    Runtime: python3.13
+    Runtime: python3.12
 
 Resources:
+
+  MyApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: LandRegistartionApi
+      StageName: Prod
+      Cors:
+        AllowMethods: "'GET,POST,OPTIONS'"
+        AllowHeaders: "'Content-Type,Authorization'"
+        AllowOrigin: "'*'"
 
   DependencyLayer:
     Type: AWS::Serverless::LayerVersion
@@ -16,13 +26,13 @@ Resources:
       Description: Shared libraries for Lambda functions
       ContentUri: layer/
       CompatibleRuntimes:
-        - python3.13
+        - python3.12
 
   AtomicFeederFunction:
     Type: AWS::Serverless::Function
     Properties:
       Handler: app.lambda_handler
-      Runtime: python3.13
+      Runtime: python3.12
       CodeUri: ./AtomicFeederFunction
       Description: Function to write data to DynamoDB
       Environment:
@@ -44,12 +54,15 @@ Resources:
           Properties:
             Path: /feeder
             Method: POST
+            RestApiId: !Ref MyApi
+            Auth:
+              None: {}
 
   LandRecordFunction:
     Type: AWS::Serverless::Function
     Properties:
       Handler: app.lambda_handler
-      Runtime: python3.13
+      Runtime: python3.12
       CodeUri: ./LandRecordFunction
       Environment:
         Variables:
@@ -64,13 +77,16 @@ Resources:
           Type: Api
           Properties:
             Path: /land
-            Method: POST
+            Method: GET
+            RestApiId: !Ref MyApi
+            Auth:
+              None: {}
 
   CitizenFeedbackFunction:
     Type: AWS::Serverless::Function
     Properties:
       Handler: app.lambda_handler
-      Runtime: python3.13
+      Runtime: python3.12
       CodeUri: ./CitizenFeedbackFunction
       Environment:
         Variables:
@@ -85,29 +101,22 @@ Resources:
           Type: Api
           Properties:
             Path: /feedback
-            Method: GET
-  
+            Method: POST
+            RestApiId: !Ref MyApi
+            Auth:
+              None: {}
+
   LandRecordTable:
-  Type: AWS::DynamoDB::Table
-  Properties:
-    BillingMode: PAY_PER_REQUEST
-    TableName: LandRecords
-    AttributeDefinitions:
-      - AttributeName: record_id
-        AttributeType: S
-      - AttributeName: parcel_id
-        AttributeType: S
-      - AttributeName: owner
-        AttributeType: S
-      - AttributeName: comment
-        AttributeType: S
-      - AttributeName: timestamp
-        AttributeType: S
-      - AttributeName: record_hash
-        AttributeType: S
-    KeySchema:
-      - AttributeName: record_id
-        KeyType: HASH
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      TableName: LandRecords
+      AttributeDefinitions:
+        - AttributeName: record_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: record_id
+          KeyType: HASH
 
   CitizenFeedbackTable:
     Type: AWS::Serverless::SimpleTable
@@ -117,26 +126,23 @@ Resources:
         Name: feedback_id
         Type: String
 
-  ServiceTable:
-    Type: AWS::Serverless::SimpleTable
-    Properties:
-      TableName: ServiceTable
-      PrimaryKey:
-        Name: requestId
-        Type: String
-
   FrontendBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub "hackathon-frontend-${AWS::AccountId}-${AWS::Region}"
+      BucketName: !Sub "land-registartion-frontend-${AWS::AccountId}-${AWS::Region}"
       WebsiteConfiguration:
         IndexDocument: index.html
         ErrorDocument: error.html
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
 
   StaticWebsiteBucketPolicy:
     Type: AWS::S3::BucketPolicy
     Properties:
-      Bucket: !Ref StaticWebsiteBucket
+      Bucket: !Ref FrontendBucket
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -144,40 +150,7 @@ Resources:
             Effect: Allow
             Principal: "*"
             Action: "s3:GetObject"
-            Resource: !Sub "${StaticWebsiteBucket.Arn}/*"
-  
-  FrontendUploaderFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      Handler: app.lambda_handler
-      Timeout: 60
-      MemorySize: 128
-      Runtime: python3.13
-      CodeUri: ./FrontendUploader
-      Description: Function to upload frontend files to S3
-      Environment:
-        Variables:
-          BUCKET_NAME: !Ref FrontendBucket
-
-    FrontendUploaderCustomResource:
-    Type: Custom::FrontendUpload
-    DependsOn: FrontendUploaderFunction
-    Properties:
-      ServiceToken: !GetAtt FrontendUploaderFunction.Arn
-      BucketName: !Ref FrontendBucket
-      CodeUri: ./FrontendUploader
-
-  UserPool:
-    Type: AWS::Cognito::UserPool
-    Properties:
-      UserPoolName: HackathonUserPool
-
-  UserPoolClient:
-    Type: AWS::Cognito::UserPoolClient
-    Properties:
-      ClientName: HackathonClient
-      UserPoolId: !Ref UserPool
-      GenerateSecret: false
+            Resource: !Sub "${FrontendBucket.Arn}/*"
 
 Outputs:
 
@@ -187,12 +160,12 @@ Outputs:
 
   AtomicFeederFunctionAPI:
     Description: "Data feeder for land registration details."
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/feeder"
+    Value: !Sub "https://${MyApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/feeder"
 
   LandRecordFunctionAPI:
     Description: "API for land record management."
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/land"
+    Value: !Sub "https://${MyApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/land"
 
   CitizenFeedbackFunctionAPI:
     Description: "API for citizen feedback."
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/feedback"
+    Value: !Sub "https://${MyApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/feedback"

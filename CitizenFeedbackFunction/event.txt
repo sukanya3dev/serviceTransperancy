@@ -1,0 +1,15 @@
+{
+  "comment": "This is a test comment.",
+  "sla_time": "48 hours",
+  "department": "Customer Support",
+  "status": "resolved",
+  "submitted_by": "suk.bal"
+}
+
+{
+  "comment": "Which dept is for updating owner details?",
+  "sla_time": "12 hours",
+  "department": "CRM team",
+  "status": "in-progress",
+  "submitted_by": "abc.xyz@mail.com"
+}

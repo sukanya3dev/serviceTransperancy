@@ -1,9 +1,9 @@
 version = 0.1
 
 [default.deploy.parameters]
-stack_name = "infosys-global-hackathon"
+stack_name = "land-registartion-blockchain-validation"
 resolve_s3 = true
-s3_prefix = "sam"
+s3_prefix = "land-registartion-blockchain-validation"
 region = "us-east-1"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM"

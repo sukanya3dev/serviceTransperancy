@@ -1,0 +1,17 @@
+sam validate
+sam build
+sam deploy
+
+(novice frontend)
+AWS API Gateway > API > Stages > 
+                > path (any)> POST > URL
+
+Replace in HTML >
+Const API_BASE with current gateway ID in url
+
+Push frontend files to frontend  S3
+>Test frontend
+
+Manually delete files from same S3
+
+sam delete

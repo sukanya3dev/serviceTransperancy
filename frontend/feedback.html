@@ -1,6 +1,69 @@
-<form id="feedbackForm">
-  <input type="text" name="name" placeholder="Your Name" required>
-  <textarea name="feedback" placeholder="Your Feedback" required></textarea>
-  <button type="submit">Submit</button>
-</form>
-<script src="js/feedback.js"></script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Submit Feedback</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+</head>
+<body>
+  <div id="app">
+    <h2>Submit Your Feedback</h2>
+
+    <form @submit.prevent="submitFeedback">
+      <input v-model="name" placeholder="Your Name" required>
+      <textarea v-model="feedback" placeholder="Your Feedback" required></textarea>
+      <button type="submit">Submit</button>
+    </form>
+
+    <p v-if="message">{{ message }}</p>
+  </div>
+
+  <script>
+    const API_BASE = 'https://gf7naj49zi.execute-api.us-east-1.amazonaws.com/Prod';
+
+    async function postData(endpoint, data) {
+      try {
+        const response = await fetch(`${API_BASE}/${endpoint}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(data)
+        });
+        return await response.json();
+      } catch (err) {
+        console.error('Error submitting feedback:', err);
+        return { message: 'Failed to send feedback.' };
+      }
+    }
+
+    new Vue({
+      el: '#app',
+      data: {
+        name: '',
+        feedback: '',
+        message: ''
+      },
+      methods: {
+        async submitFeedback() {
+          const payload = {
+            comment: this.feedback,
+            sla_time: '24 hours',
+            department: 'General',
+            status: 'pending',
+            submitted_by: this.name
+          };
+
+          const result = await postData('feedback', payload);
+          this.message = result.message || 'Feedback submitted!';
+
+          // Optionally reset form
+          this.name = '';
+          this.feedback = '';
+        }
+      }
+    });
+  </script>
+</body>
+</html>

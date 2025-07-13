@@ -1,9 +1,0 @@
-{
-  "url" : " https://3fbpso0jn6.execute-api.us-east-1.amazonaws.com/Prod/feedback",
-  "method": "GET",
-  "parcel_id": "PCL-123456",
-  "owner_name": "John Doe",
-  "comment": "This is a test comment",
-  "body": "{\"comment\": \"The service was excellent.\", \"sla_time\": \"48 hours\", \"department\": \"Customer Support\", \"status\": \"resolved\", \"submitted_by\": \"john.doe\"}"
-}
-

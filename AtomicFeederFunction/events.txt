@@ -1,3 +1,10 @@
 {
-  "body": "{\"parcel_id\": \"PCL-123456\", \"owner_name\": \"John Doe\", \"comment\": \"Test comment\"}"
+  "body": "{\"parcel_id\": \"PCL-123456\", \"owner_name\": \"suk bal\", \"comment\": \"Testing wokring\"}"
+}
+
+postman - 
+{
+  "parcel_id": "PCL-46478",
+  "owner_name": "bal suk",
+  "comment": "cmnt wokring"
 }

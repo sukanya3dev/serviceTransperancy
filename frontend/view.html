@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>View Land Record</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+</head>
+<body>
+  <div id="app">
+    <h2>Search Land Record by ID</h2>
+
+    <form @submit.prevent="fetchRecord">
+      <input v-model="recordId" placeholder="Enter Record ID" required>
+      <button type="submit">Fetch Record</button>
+    </form>
+
+    <div v-if="message" style="margin-top: 1rem; color: red;">{{ message }}</div>
+
+    <table v-if="record" border="1" cellpadding="10" cellspacing="0" style="margin-top: 1rem;">
+      <thead>
+        <tr>
+          <th>Owner</th>
+          <th>Parcel ID</th>
+          <th>Comment</th>
+          <th>Status</th>
+          <th>Timestamp</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>{{ record.owner_name }}</td>
+          <td>{{ record.parcel_id }}</td>
+          <td>{{ record.comment }}</td>
+          <td>{{ record.status }}</td>
+          <td>{{ record.timestamp }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    const API_BASE = 'https://gf7naj49zi.execute-api.us-east-1.amazonaws.com/Prod';
+
+    new Vue({
+      el: '#app',
+      data: {
+        recordId: '',
+        record: null,
+        message: ''
+      },
+      methods: {
+        async fetchRecord() {
+          this.message = '';
+          this.record = null;
+
+          try {
+            const response = await fetch(`${API_BASE}/land?record_id=${encodeURIComponent(this.recordId)}`);
+            const data = await response.json();
+
+            if (response.ok) {
+              this.record = data;
+            } else {
+              this.message = data.error || 'Failed to fetch record.';
+            }
+          } catch (error) {
+            console.error('Fetch error:', error);
+            this.message = 'Network error while fetching record.';
+          }
+        }
+      }
+    });
+  </script>
+</body>
+</html>

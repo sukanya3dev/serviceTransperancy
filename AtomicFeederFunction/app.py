@@ -34,6 +34,8 @@ def lambda_handler(event, context):
         'status': 'pending',
         }
     
+    print(item)
+
     try:
         table.put_item(Item=item)
         logger.info(f"Item inserted into DynamoDB: {item}")    
@@ -44,10 +46,14 @@ def lambda_handler(event, context):
             'body': json.dumps({'error': 'Internal server error'})
         }
     
-    return{
-        'statusCode': 200,
-        'body': json.dumps('Data feeding successful!'),
-        'headers': {
-            'Content-Type': 'application/json'
-        }
-    }
+    return {
+    'statusCode': 200,
+    'headers': {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type'
+    },
+    'body': json.dumps({
+        'message': 'Land registered successfully!'
+    })
+}
